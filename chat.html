@@ -1,0 +1,198 @@
+<!-- chat.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chat</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background-color: #222;
+            color: #fff;
+        }
+
+        #chat-container {
+            max-width: 600px;
+            margin: 20px auto;
+            border: 1px solid #333;
+            padding: 20px;
+            background-color: #111;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        #chat-box {
+            height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #333;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #333;
+            border-radius: 8px;
+        }
+
+        .user-message {
+            background-color: #4CAF50;
+            color: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+
+        #message-input {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #333;
+            background-color: #222;
+            color: #fff;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        #name-display {
+            font-weight: bold;
+        }
+
+        #send-button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        #signOutBtn {
+            width: 100%;
+            padding: 10px;
+            background-color: #d9534f;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chat-container">
+        <div id="chat-box"></div>
+        <form id="message-form">
+            <span id="name-display"></span>
+            <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off">
+            <button type="submit" id="send-button">Send</button>
+            <button type="button" id="signOutBtn">Sign Out</button>
+        </form>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, push, set, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+
+        // Firebase project configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCAPs0_Z9jar-ezvWzvaLR7w37ciqdFKvk",
+            authDomain: "firestoretest-c143d.firebaseapp.com",
+            projectId: "firestoretest-c143d",
+            storageBucket: "firestoretest-c143d.appspot.com",
+            messagingSenderId: "420007931962",
+            appId: "1:420007931962:web:a42fbd1966424230210503"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+
+        // Firebase Auth instance
+        const auth = getAuth(app);
+
+        // Firebase Realtime Database instance
+        const database = getDatabase(app);
+        const chatRef = ref(database, 'chat');
+
+        let userName;
+
+        const checkAuthState = async () => {
+            const user = await new Promise((resolve) => {
+                onAuthStateChanged(auth, (user) => {
+                    resolve(user);
+                });
+            });
+
+            if (user) {
+                userName = getQueryParam('username') || user.displayName || 'Guest';
+                document.getElementById('name-display').textContent = 'You are: ' + userName;
+
+                // Listen for new messages and update the chat box
+                onChildAdded(chatRef, (snapshot) => {
+                    const message = snapshot.val();
+                    displayMessage(message.name, message.text);
+                });
+            } else {
+                window.location.href = 'signup.html';
+            }
+        };
+
+        checkAuthState();
+
+        function sendMessage(event) {
+            event.preventDefault();
+
+            const messageInput = document.getElementById('message-input');
+            const messageText = messageInput.value.trim();
+
+            if (messageText !== '') {
+                const newMessageRef = push(chatRef); // Generate a unique key for the message
+                set(newMessageRef, {
+                    name: userName,
+                    text: messageText
+                });
+
+                messageInput.value = '';
+            }
+        }
+
+        function displayMessage(name, text) {
+            const chatBox = document.getElementById('chat-box');
+            const newMessage = document.createElement('div');
+            newMessage.className = 'message';
+            newMessage.innerHTML = '<span id="name-display">' + name + ':</span> ' + text;
+            chatBox.appendChild(newMessage);
+            chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom of the chat box
+        }
+
+        function getQueryParam(param) {
+            const queryString = window.location.search;
+            const urlParams = new URLSearchParams(queryString);
+            return urlParams.get(param);
+        }
+
+        function signOutUser() {
+            signOut(auth)
+                .then(() => {
+                    window.location.href = 'signup.html';
+                })
+                .catch((error) => {
+                    console.error('Sign out error:', error);
+                });
+        }
+
+        const messageForm = document.getElementById('message-form');
+        const signOutBtn = document.getElementById('signOutBtn');
+
+        messageForm.addEventListener('submit', sendMessage);
+        signOutBtn.addEventListener('click', signOutUser);
+    </script>
+</body>
+
+</html>
